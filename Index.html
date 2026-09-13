@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lista de Presentes da Família</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- SDK oficial do Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --danger: #ef4444;
+      --danger-bg: #fef2f2;
+      --success: #10b981;
+      --success-bg: #ecfdf5;
+      --warning: #f59e0b;
+      --warning-bg: #fffbeb;
+      --radius: 14px;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+    body { background-color: var(--bg); color: var(--text-main); padding: 30px 15px; min-height: 100vh; }
+    .container { max-width: 960px; margin: 0 auto; }
+
+    .card { background: var(--card-bg); padding: 30px; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); margin-bottom: 24px; }
+    .hidden { display: none !important; }
+    
+    h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 8px; }
+    h2 { font-size: 1.35rem; font-weight: 600; margin-bottom: 16px; }
+    h3 { font-size: 1rem; font-weight: 600; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+    p { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 20px; }
+
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 6px; }
+    input, select { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: 10px; font-size: 0.95rem; background: #fafafa; }
+    input:focus, select:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1); }
+    
+    .btn-group { display: flex; gap: 10px; margin-top: 10px; }
+    button { padding: 12px 20px; background: var(--primary); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: all 0.2s; }
+    button:hover { background: var(--primary-hover); transform: translateY(-1px); }
+    button.btn-secondary { background: #f1f5f9; color: var(--text-main); border: 1px solid var(--border); }
+    button.btn-secondary:hover { background: #e2e8f0; }
+    button.btn-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid #fca5a5; }
+    button.btn-danger:hover { background: var(--danger); color: white; }
+    button.btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+
+    header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+    .user-badge strong { color: var(--primary); font-weight: 700; }
+    nav { display: flex; gap: 8px; flex-wrap: wrap; }
+    nav button { padding: 8px 14px; font-size: 0.875rem; }
+
+    .category-folder {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .category-folder:hover {
+      border-color: var(--primary);
+      background: #fdfdfd;
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+    .category-folder h3 {
+      margin: 0;
+      color: var(--primary);
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-transform: none;
+      letter-spacing: normal;
+    }
+    .category-folder .count {
+      background: #f1f5f9;
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .category-section { margin-bottom: 28px; background: #ffffff; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+    .category-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border); padding-bottom: 10px; margin-bottom: 16px; }
+    .category-title { font-size: 1.15rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; margin-top: 10px; }
+    .gift-card { background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
+    .gift-title { font-weight: 600; font-size: 1.05rem; display: block; margin-bottom: 6px; color: var(--text-main); text-decoration: none; }
+    a.gift-title:hover { color: var(--primary); }
+    .price { font-size: 1.25rem; color: var(--text-main); font-weight: 700; margin-bottom: 12px; }
+    .price-optional { font-size: 0.95rem; color: var(--text-muted); font-weight: 500; margin-bottom: 12px; font-style: italic; }
+    
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin-bottom: 14px; width: fit-content; }
+    .badge-available { background: var(--success-bg); color: var(--success); border: 1px solid #a7f3d0; }
+    .badge-reserved { background: var(--warning-bg); color: var(--warning); border: 1px solid #fde68a; }
+
+    .group-item { background: #f8fafc; border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .group-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; }
+    .member-chip { background: #ffffff; border: 1px solid var(--border); padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; color: var(--primary); cursor: pointer; transition: all 0.2s; }
+    .member-chip:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .invite-card { background: var(--warning-bg); border: 1px solid #fde68a; padding: 14px 18px; border-radius: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- TELA DE LOGIN / CADASTRO -->
+  <div id="auth-screen" class="card" style="max-width: 420px; margin: 60px auto;">
+    <h1 id="auth-title">Entrar na Conta</h1>
+    <p>Gerencie e compartilhe suas listas de presentes facilmente.</p>
+    <form id="auth-form" onsubmit="handleAuth(event)">
+      <div class="form-group">
+        <label>Nome de Usuário</label>
+        <input type="text" id="username" placeholder="ex: maria_silva" required>
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <input type="password" id="password" placeholder="••••••••" required>
+      </div>
+      <div class="btn-group" style="flex-direction: column;">
+        <button type="submit" id="auth-btn">Entrar</button>
+        <button type="button" class="btn-secondary" onclick="toggleAuthMode()" id="toggle-auth-btn">Criar uma conta nova</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- PAINEL PRINCIPAL -->
+  <div id="app-screen" class="hidden">
+    <header class="card" id="app-header">
+      <div class="user-badge">Olá, <strong id="user-display"></strong> 👋</div>
+      <nav id="app-nav">
+        <button onclick="showTab('my-list')">🎁 Minha Lista</button>
+        <button onclick="showTab('groups')" class="btn-secondary">👥 Grupos</button>
+        <button onclick="showTab('search')" class="btn-secondary">🔍 Buscar Lista</button>
+        <button class="btn-danger" onclick="logout()">Sair</button>
+      </nav>
+    </header>
+
+    <!-- ABA: MINHA LISTA -->
+    <div id="tab-my-list" class="tab-content card">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+        <h2>Meus Desejos</h2>
+        <button class="btn-secondary" onclick="copyShareLink()">🔗 Copiar Lista Completa</button>
+      </div>
+      
+      <form onsubmit="addGift(event)" style="background: #f8fafc; padding: 20px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 24px;">
+        <h3>Adicionar Novo Item</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: start;">
+          <input type="text" id="gift-name" placeholder="Nome do Produto *" required>
+          
+          <div>
+            <select id="gift-category-select" onchange="handleCategoryChange(this)">
+              <option value="Geral">📁 Geral</option>
+              <option value="__NEW__">➕ Criar Nova Categoria...</option>
+            </select>
+            <input type="text" id="gift-category-custom" class="hidden" placeholder="Nome da nova categoria..." style="margin-top: 8px;">
+          </div>
+
+          <input type="number" step="0.01" id="gift-price" placeholder="Preço em R$ (opcional)">
+          <input type="url" id="gift-link" placeholder="Link do Produto (opcional)">
+        </div>
+        <button type="submit" style="margin-top: 12px;">Adicionar à Lista</button>
+      </form>
+
+      <h3>Sua Lista por Categorias</h3>
+      <p style="font-size:0.85rem; margin-bottom:12px;">Clique em uma categoria para ver os itens ou use o botão para compartilhar apenas aquela categoria.</p>
+      <div id="my-gifts-container"></div>
+    </div>
+
+    <!-- ABA: BUSCAR / VISUALIZAR LISTA COMPARTILHADA -->
+    <div id="tab-search" class="tab-content card hidden">
+      <div id="search-controls-box">
+        <h2>Buscar Lista de Presentes</h2>
+        <p>Digite o nome de usuário de quem você quer ver a lista de desejos.</p>
+        <div style="display: flex; gap: 10px; margin-bottom: 24px;">
+          <input type="text" id="search-username" placeholder="Digite o username (ex: maria)" style="margin:0;">
+          <button onclick="searchUserList()">Buscar</button>
+        </div>
+      </div>
+      <h2 id="viewing-user-title"></h2>
+      <div id="public-gifts-container"></div>
+    </div>
+
+    <!-- ABA: GRUPOS -->
+    <div id="tab-groups" class="tab-content card hidden">
+      <h2>Meus Grupos</h2>
+      <p>Organize eventos em família ou amigos (ex: Natal, Amigo Oculto).</p>
+
+      <div id="pending-invites-section" class="hidden" style="margin-bottom: 24px;">
+        <h3 style="color: var(--warning);"> Convites Pendentes</h3>
+        <div id="invites-list"></div>
+      </div>
+      
+      <form onsubmit="createGroup(event)" style="background: #f8fafc; padding: 20px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 24px;">
+        <h3>Criar Novo Grupo</h3>
+        <div style="display: flex; gap: 10px;">
+          <input type="text" id="group-name" placeholder="Nome do Grupo" required style="margin:0;">
+          <button type="submit">Criar</button>
+        </div>
+      </form>
+
+      <h3>Seus Grupos Ativos</h3>
+      <div id="groups-list"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://yjsccppijzrbhzxqghxa.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_hYgUPd3LKugllXWH4l_hPg_L-BQix53';
+
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let currentUser = localStorage.getItem('gift_currentUser') || null;
+  let isLoginMode = true;
+
+  let myGiftsData = [];
+  let searchGiftsData = [];
+  let activeMyCategory = null;
+  let activeSearchCategory = null;
+
+  function formatarLinkShopeeAfiliado(linkOriginal) {
+    if (!linkOriginal) return '';
+    if (linkOriginal.includes("s.shopee.com.br") || linkOriginal.includes("shope.ee")) return linkOriginal;
+    if (linkOriginal.includes("shopee.com.br")) {
+      try {
+        const url = new URL(linkOriginal);
+        url.searchParams.set("sub_id", "presentes_site");
+        url.searchParams.set("utm_source", "afiliados");
+        return url.toString();
+      } catch (e) {
+        return linkOriginal;
+      }
+    }
+    return linkOriginal;
+  }
+
+  function safeDecode(val) {
+    if (!val) return '';
+    try {
+      return decodeURIComponent(val);
+    } catch (e) {
+      return val;
+    }
+  }
+
+  window.onload = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const rawUser = urlParams.get('user');
+    const rawCategory = urlParams.get('category');
+
+    const sharedUser = rawUser ? safeDecode(rawUser) : null;
+    const sharedCategory = rawCategory ? safeDecode(rawCategory) : null;
+
+    if (sharedUser) {
+      document.getElementById('auth-screen').classList.add('hidden');
+      document.getElementById('app-screen').classList.remove('hidden');
+
+      if (!currentUser) {
+        document.getElementById('user-display').innerText = 'Visitante';
+        document.getElementById('app-nav').innerHTML = `<button onclick="location.href=location.pathname">🔑 Entrar / Criar Conta</button>`;
+      } else {
+        document.getElementById('user-display').innerText = currentUser;
+      }
+
+      showTab('search');
+      loadSharedLinkView(sharedUser, sharedCategory);
+    } else if (currentUser) {
+      document.getElementById('auth-screen').classList.add('hidden');
+      document.getElementById('app-screen').classList.remove('hidden');
+      document.getElementById('user-display').innerText = currentUser;
+      loadMyGifts();
+    }
+  };
+
+  async function loadSharedLinkView(targetUser, targetCategory) {
+    const searchControls = document.getElementById('search-controls-box');
+    const title = document.getElementById('viewing-user-title');
+    const container = document.getElementById('public-gifts-container');
+
+    container.innerHTML = '<p>Carregando presentes...</p>';
+
+    const cleanUser = safeDecode(targetUser);
+    const cleanCategory = targetCategory ? safeDecode(targetCategory) : null;
+
+    const { data: userGifts } = await _supabase
+      .from('presentes')
+      .select('*')
+      .eq('username', cleanUser)
+      .order('id', { ascending: false });
+
+    searchGiftsData = userGifts || [];
+
+    if (cleanCategory) {
+      searchControls.classList.add('hidden');
+      const categoryGifts = searchGiftsData.filter(g => 
+        (g.category || 'Geral').toLowerCase() === cleanCategory.toLowerCase()
+      );
+      
+      title.innerText = `🎁 Categoria: ${cleanCategory} (@${cleanUser})`;
+      
+      if (categoryGifts.length === 0) {
+        container.innerHTML = '<p>Nenhum presente encontrado nesta categoria.</p>';
+        return;
+      }
+
+      renderSingleCategoryDirectly(categoryGifts, container, cleanCategory, cleanUser);
+    } else {
+      searchControls.classList.add('hidden');
+      title.innerText = `Lista de @${cleanUser}`;
+      
+      if (searchGiftsData.length === 0) {
+        container.innerHTML = '<p>Nenhum presente encontrado para este usuário.</p>';
+        return;
+      }
+
+      activeSearchCategory = null;
+      renderGiftsGroupedByCategory(searchGiftsData, container, false);
+    }
+  }
+
+  function renderSingleCategoryDirectly(giftList, containerElement, categoryName, targetUser) {
+    containerElement.innerHTML = '';
+    const section = document.createElement('div');
+    section.className = 'category-section';
+
+    let itemsHtml = '';
+    giftList.forEach(gift => {
+      const hasLink = gift.link && gift.link.trim() !== '';
+      const linkHtml = hasLink 
+        ? `<a href="${gift.link}" target="_blank" class="gift-title">${gift.name} ↗</a>` 
+        : `<span class="gift-title">${gift.name}</span>`;
+
+      const hasPrice = gift.price !== null && gift.price !== undefined && gift.price > 0;
+      const priceHtml = hasPrice
+        ? `<div class="price">R$ ${parseFloat(gift.price).toFixed(2)}</div>`
+        : `<div class="price-optional">Preço não especificado</div>`;
+
+      const actionBtn = `<button class="${gift.reserved ? 'btn-secondary' : ''}" onclick="toggleReserveDirect(${gift.id}, ${gift.reserved}, '${targetUser}', '${categoryName}')" style="width:100%;">
+          ${gift.reserved ? 'Cancelar Reserva' : 'Vou dar este presente'}
+        </button>`;
+
+      itemsHtml += `
+        <div class="gift-card">
+          <div>
+            ${linkHtml}
+            ${priceHtml}
+            <span class="badge ${gift.reserved ? 'badge-reserved' : 'badge-available'}">
+              ${gift.reserved ? '🔴 Reservado' : '🟢 Disponível'}
+            </span>
+          </div>
+          ${actionBtn}
+        </div>
+      `;
+    });
+
+    section.innerHTML = `
+      <div class="category-header">
+        <div class="category-title">📁 ${categoryName} <span style="font-size:0.85rem; color:var(--text-muted); font-weight:500;">(${giftList.length} ${giftList.length === 1 ? 'item' : 'itens'})</span></div>
+      </div>
+      <div class="grid">${itemsHtml}</div>
+    `;
+
+    containerElement.appendChild(section);
+  }
+
+  async function toggleReserveDirect(giftId, currentReservedStatus, targetUser, categoryName) {
+    await _supabase
+      .from('presentes')
+      .update({ reserved: !currentReservedStatus })
+      .eq('id', giftId);
+
+    loadSharedLinkView(targetUser, categoryName);
+  }
+
+  function toggleAuthMode() {
+    isLoginMode = !isLoginMode;
+    document.getElementById('auth-title').innerText = isLoginMode ? 'Entrar na Conta' : 'Criar Conta';
+    document.getElementById('auth-btn').innerText = isLoginMode ? 'Entrar' : 'Cadastrar';
+    document.getElementById('toggle-auth-btn').innerText = isLoginMode ? 'Criar uma conta nova' : 'Já tenho uma conta';
+  }
+
+  async function handleAuth(e) {
+    e.preventDefault();
+    const userVal = document.getElementById('username').value.trim().toLowerCase();
+    const passVal = document.getElementById('password').value;
+
+    if (isLoginMode) {
+      const { data } = await _supabase
+        .from('usuarios')
+        .select('*')
+        .eq('username', userVal)
+        .eq('senha', passVal)
+        .single();
+
+      if (data) {
+        login(data.username);
+      } else {
+        alert('Usuário ou senha incorretos!');
+      }
+    } else {
+      const { data: existingUser } = await _supabase
+        .from('usuarios')
+        .select('username')
+        .eq('username', userVal)
+        .maybeSingle();
+
+      if (existingUser) {
+        alert('Este nome de usuário já está em uso!');
+        return;
+      }
+
+      const { error } = await _supabase
+        .from('usuarios')
+        .insert([{ username: userVal, senha: passVal }]);
+
+      if (error) {
+        alert('Erro ao criar conta: ' + error.message);
+      } else {
+        alert('Conta criada com sucesso!');
+        login(userVal);
+      }
+    }
+  }
+
+  function login(username) {
+    currentUser = username;
+    localStorage.setItem('gift_currentUser', currentUser);
+    location.href = window.location.pathname;
+  }
+
+  function logout() {
+    localStorage.removeItem('gift_currentUser');
+    location.href = window.location.pathname;
+  }
+
+  function showTab(tabName) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+    if (tabName === 'my-list') loadMyGifts();
+    if (tabName === 'groups') loadGroups();
+    if (tabName === 'search') {
+      document.getElementById('search-controls-box').classList.remove('hidden');
+    }
+  }
+
+  function handleCategoryChange(selectEl) {
+    const customInput = document.getElementById('gift-category-custom');
+    if (selectEl.value === '__NEW__') {
+      customInput.classList.remove('hidden');
+      customInput.required = true;
+      customInput.focus();
+    } else {
+      customInput.classList.add('hidden');
+      customInput.required = false;
+      customInput.value = '';
+    }
+  }
+
+  async function addGift(e) {
+    e.preventDefault();
+    const name = document.getElementById('gift-name').value.trim();
+    
+    const categorySelect = document.getElementById('gift-category-select').value;
+    const customCategory = document.getElementById('gift-category-custom').value.trim();
+
+    let category = 'Geral';
+    if (categorySelect === '__NEW__') {
+      category = customCategory || 'Geral';
+    } else {
+      category = categorySelect;
+    }
+
+    const priceVal = document.getElementById('gift-price').value;
+    const rawLink = document.getElementById('gift-link').value.trim();
+
+    const price = priceVal ? parseFloat(priceVal) : 0;
+    const linkComissionado = rawLink ? formatarLinkShopeeAfiliado(rawLink) : '';
+
+    const { error } = await _supabase
+      .from('presentes')
+      .insert([{ username: currentUser, name, category, price, link: linkComissionado, reserved: false }]);
+
+    if (error) {
+      alert('Erro ao adicionar item: ' + error.message);
+    } else {
+      e.target.reset();
+      handleCategoryChange(document.getElementById('gift-category-select'));
+      activeMyCategory = category;
+      loadMyGifts();
+    }
+  }
+
+  async function loadMyGifts() {
+    const container = document.getElementById('my-gifts-container');
+    container.innerHTML = '<p>Carregando...</p>';
+
+    const { data: myGifts } = await _supabase
+      .from('presentes')
+      .select('*')
+      .eq('username', currentUser)
+      .order('id', { ascending: false });
+
+    myGiftsData = myGifts || [];
+    container.innerHTML = '';
+
+    if (myGiftsData.length === 0) {
+      container.innerHTML = '<p>Você ainda não cadastrou nenhum presente.</p>';
+      updateCategoryDropdown([]);
+      return;
+    }
+
+    updateCategoryDropdown(myGiftsData);
+    renderGiftsGroupedByCategory(myGiftsData, container, true);
+  }
+
+  function updateCategoryDropdown(gifts) {
+    const select = document.getElementById('gift-category-select');
+    const existingCategories = [...new Set(gifts.map(g => g.category || 'Geral'))];
+
+    if (!existingCategories.includes('Geral')) {
+      existingCategories.unshift('Geral');
+    }
+
+    select.innerHTML = '';
+    existingCategories.forEach(cat => {
+      select.innerHTML += `<option value="${cat}">📁 ${cat}</option>`;
+    });
+
+    select.innerHTML += `<option value="__NEW__">➕ Criar Nova Categoria...</option>`;
+  }
+
+  function renderGiftsGroupedByCategory(gifts, containerElement, isOwner) {
+    containerElement.innerHTML = '';
+    const activeCat = isOwner ? activeMyCategory : activeSearchCategory;
+
+    const grouped = {};
+    gifts.forEach(gift => {
+      const cat = gift.category || 'Geral';
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(gift);
+    });
+
+    const categories = Object.keys(grouped);
+
+    if (!activeCat) {
+      const folderGrid = document.createElement('div');
+      folderGrid.className = 'grid';
+
+      categories.forEach(catName => {
+        const count = grouped[catName].length;
+        const folderCard = document.createElement('div');
+        folderCard.className = 'category-folder';
+        folderCard.onclick = () => selectCategory(catName, isOwner);
+        
+        const shareBtnHtml = isOwner 
+          ? `<button class="btn-secondary btn-sm" onclick="event.stopPropagation(); copyCategoryShareLink('${catName}')">🔗 Compartilhar</button>`
+          : '';
+
+        folderCard.innerHTML = `
+          <div>
+            <h3>📁 ${catName}</h3>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="count">${count} ${count === 1 ? 'item' : 'itens'}</span>
+            ${shareBtnHtml}
+          </div>
+        `;
+        folderGrid.appendChild(folderCard);
+      });
+
+      containerElement.appendChild(folderGrid);
+      return;
+    }
+
+    if (!grouped[activeCat]) {
+      if (isOwner) activeMyCategory = null;
+      else activeSearchCategory = null;
+      renderGiftsGroupedByCategory(gifts, containerElement, isOwner);
+      return;
+    }
+
+    const giftList = grouped[activeCat];
+    const section = document.createElement('div');
+    section.className = 'category-section';
+
+    let itemsHtml = '';
+    giftList.forEach(gift => {
+      const hasLink = gift.link && gift.link.trim() !== '';
+      const linkHtml = hasLink 
+        ? `<a href="${gift.link}" target="_blank" class="gift-title">${gift.name} ↗</a>` 
+        : `<span class="gift-title">${gift.name}</span>`;
+
+      const hasPrice = gift.price !== null && gift.price !== undefined && gift.price > 0;
+      const priceHtml = hasPrice
+        ? `<div class="price">R$ ${parseFloat(gift.price).toFixed(2)}</div>`
+        : `<div class="price-optional">Preço não especificado</div>`;
+
+      const actionBtn = isOwner
+        ? `<button class="btn-danger" onclick="deleteGift(${gift.id})" style="margin-top:10px; width:100%;">Excluir</button>`
+        : `<button class="${gift.reserved ? 'btn-secondary' : ''}" onclick="toggleReserve(${gift.id}, ${gift.reserved})" style="width:100%;">
+            ${gift.reserved ? 'Cancelar Reserva' : 'Vou dar este presente'}
+          </button>`;
+
+      itemsHtml += `
+        <div class="gift-card">
+          <div>
+            ${linkHtml}
+            ${priceHtml}
+            <span class="badge ${gift.reserved ? 'badge-reserved' : 'badge-available'}">
+              ${gift.reserved ? '🔴 Reservado' : '🟢 Disponível'}
+            </span>
+          </div>
+          ${actionBtn}
+        </div>
+      `;
+    });
+
+    const shareCategoryBtn = isOwner
+      ? `<button class="btn-secondary btn-sm" onclick="copyCategoryShareLink('${activeCat}')">🔗 Compartilhar esta Categoria</button>`
+      : '';
+
+    section.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+        <button class="btn-secondary btn-sm" onclick="clearCategory(${isOwner})">⬅️ Voltar para Categorias</button>
+        ${shareCategoryBtn}
+      </div>
+      <div class="category-header">
+        <div class="category-title">📁 ${activeCat} <span style="font-size:0.85rem; color:var(--text-muted); font-weight:500;">(${giftList.length})</span></div>
+      </div>
+      <div class="grid">${itemsHtml}</div>
+    `;
+
+    containerElement.appendChild(section);
+  }
+
+  function selectCategory(catName, isOwner) {
+    if (isOwner) {
+      activeMyCategory = catName;
+      renderGiftsGroupedByCategory(myGiftsData, document.getElementById('my-gifts-container'), true);
+    } else {
+      activeSearchCategory = catName;
+      renderGiftsGroupedByCategory(searchGiftsData, document.getElementById('public-gifts-container'), false);
+    }
+  }
+
+  function clearCategory(isOwner) {
+    if (isOwner) {
+      activeMyCategory = null;
+      renderGiftsGroupedByCategory(myGiftsData, document.getElementById('my-gifts-container'), true);
+    } else {
+      activeSearchCategory = null;
+      renderGiftsGroupedByCategory(searchGiftsData, document.getElementById('public-gifts-container'), false);
+    }
+  }
+
+  async function deleteGift(id) {
+    await _supabase.from('presentes').delete().eq('id', id);
+    loadMyGifts();
+  }
+
+  function copyShareLink() {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?user=${encodeURIComponent(currentUser)}`;
+    navigator.clipboard.writeText(shareUrl);
+    alert('Link da sua lista inteira copiado!');
+  }
+
+  function copyCategoryShareLink(categoryName) {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?user=${encodeURIComponent(currentUser)}&category=${encodeURIComponent(categoryName)}`;
+    navigator.clipboard.writeText(shareUrl);
+    alert(`Link direto exclusivo para a categoria "${categoryName}" copiado!`);
+  }
+
+  async function searchUserList() {
+    const targetUser = document.getElementById('search-username').value.trim().toLowerCase();
+    if (!targetUser) return;
+    loadSharedLinkView(targetUser, null);
+  }
+
+  async function toggleReserve(giftId, currentReservedStatus) {
+    await _supabase
+      .from('presentes')
+      .update({ reserved: !currentReservedStatus })
+      .eq('id', giftId);
+
+    const targetUser = document.getElementById('search-username').value.trim().toLowerCase();
+    searchUserList();
+  }
+
+  async function createGroup(e) {
+    e.preventDefault();
+    const name = document.getElementById('group-name').value;
+
+    const { error } = await _supabase
+      .from('grupos')
+      .insert([{ name, owner: currentUser, members: [currentUser], pending_invites: [] }]);
+
+    if (error) {
+      alert('Erro ao criar grupo: ' + error.message);
+    } else {
+      e.target.reset();
+      loadGroups();
+    }
+  }
+
+  async function loadGroups() {
+    const container = document.getElementById('groups-list');
+    const invitesSection = document.getElementById('pending-invites-section');
+    const invitesList = document.getElementById('invites-list');
+
+    container.innerHTML = '<p>Carregando grupos...</p>';
+    invitesList.innerHTML = '';
+    invitesSection.classList.add('hidden');
+
+    const { data: pendingGroups } = await _supabase
+      .from('grupos')
+      .select('*')
+      .contains('pending_invites', [currentUser]);
+
+    if (pendingGroups && pendingGroups.length > 0) {
+      invitesSection.classList.remove('hidden');
+      pendingGroups.forEach(g => {
+        invitesList.innerHTML += `
+          <div class="invite-card">
+            <span>Você foi convidado(a) para participar do grupo <strong>${g.name}</strong></span>
+            <div style="display:flex; gap:8px;">
+              <button class="btn-sm" onclick="respondInvite(${g.id}, true)">Aceitar</button>
+              <button class="btn-secondary btn-sm" onclick="respondInvite(${g.id}, false)">Recusar</button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    const { data: myGroups } = await _supabase
+      .from('grupos')
+      .select('*')
+      .contains('members', [currentUser]);
+
+    container.innerHTML = '';
+
+    if (!myGroups || myGroups.length === 0) {
+      container.innerHTML = '<p>Você não participa de nenhum grupo ainda.</p>';
+      return;
+    }
+
+    myGroups.forEach(group => {
+      const membersChips = (group.members || []).map(member => 
+        `<span class="member-chip" onclick="openMemberGifts('${member}')">🎁 @${member}</span>`
+      ).join(' ');
+
+      const pendingChips = (group.pending_invites || []).length > 0
+        ? `<div style="font-size: 0.8rem; color: var(--warning); margin-top: 6px;">
+             Aguardando aceite: ${group.pending_invites.map(p => '@' + p).join(', ')}
+           </div>`
+        : '';
+
+      container.innerHTML += `
+        <div class="group-item">
+          <div class="group-header">
+            <div>
+              <strong style="color:var(--text-main); font-size:1.1rem;">${group.name}</strong>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn-secondary btn-sm" onclick="addMemberToGroup(${group.id})">+ Convidar Membro</button>
+              <button class="btn-danger btn-sm" onclick="deleteGroup(${group.id}, '${group.name}')">Excluir Grupo</button>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">Membros (clique para ver a lista de categorias e presentes):</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              ${membersChips}
+            </div>
+            ${pendingChips}
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  async function respondInvite(groupId, accept) {
+    const { data: group } = await _supabase
+      .from('grupos')
+      .select('members, pending_invites')
+      .eq('id', groupId)
+      .single();
+
+    if (!group) return;
+
+    const newPending = (group.pending_invites || []).filter(u => u !== currentUser);
+    const newMembers = accept 
+      ? [...(group.members || []), currentUser] 
+      : (group.members || []);
+
+    await _supabase
+      .from('grupos')
+      .update({ members: newMembers, pending_invites: newPending })
+      .eq('id', groupId);
+
+    loadGroups();
+  }
+
+  async function addMemberToGroup(groupId) {
+    const newMember = prompt('Digite o nome de usuário que deseja convidar:');
+    if (!newMember) return;
+    
+    const userClean = newMember.trim().toLowerCase();
+
+    if (userClean === currentUser) {
+      alert('Você já faz parte deste grupo!');
+      return;
+    }
+
+    const { data: userExists } = await _supabase
+      .from('usuarios')
+      .select('username')
+      .eq('username', userClean)
+      .maybeSingle();
+
+    if (!userExists) {
+      alert('Usuário não encontrado no sistema!');
+      return;
+    }
+
+    const { data: group } = await _supabase
+      .from('grupos')
+      .select('members, pending_invites')
+      .eq('id', groupId)
+      .single();
+
+    if (group) {
+      const members = group.members || [];
+      const pending = group.pending_invites || [];
+
+      if (members.includes(userClean) || pending.includes(userClean)) {
+        alert('Este usuário já é membro ou já tem um convite pendente!');
+        return;
+      }
+
+      const updatedPending = [...pending, userClean];
+      await _supabase.from('grupos').update({ pending_invites: updatedPending }).eq('id', groupId);
+      alert(`Convite enviado para @${userClean}! Ele(a) precisará aceitar para entrar.`);
+      loadGroups();
+    }
+  }
+
+  async function deleteGroup(groupId, groupName) {
+    if (confirm(`Tem certeza que deseja excluir o grupo "${groupName}"? Esta ação não pode ser desfeita.`)) {
+      await _supabase.from('grupos').delete().eq('id', groupId);
+      loadGroups();
+    }
+  }
+
+  function openMemberGifts(username) {
+    showTab('search');
+    loadSharedLinkView(username, null);
+  }
+</script>
+
+</body>
+</html>
